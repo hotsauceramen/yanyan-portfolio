@@ -875,3 +875,116 @@ a {
     font-size: 13px;
   }
 }
+/* =========================================================
+   LIVE & BROADCAST
+   ========================================================= */
+
+.broadcast-section {
+  padding-top: 120px;
+  padding-bottom: 120px;
+
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.broadcast-heading {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1.2fr)
+    minmax(260px, 0.8fr);
+
+  gap: 50px;
+
+  align-items: end;
+}
+
+.broadcast-grid {
+  display: grid;
+
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  gap: 70px 28px;
+}
+
+.broadcast-card {
+  min-width: 0;
+}
+
+.broadcast-frame {
+  position: relative;
+
+  width: 100%;
+
+  aspect-ratio: 16 / 9;
+
+  overflow: hidden;
+
+  background: #111111;
+
+  border-radius: 18px;
+}
+
+.broadcast-frame video {
+  display: block;
+
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+}
+
+.broadcast-caption {
+  padding: 20px 2px 0;
+}
+
+.broadcast-caption h3 {
+  margin: 5px 0 9px;
+
+  font-size: 20px;
+
+  font-weight: 600;
+
+  letter-spacing: -0.02em;
+}
+
+.broadcast-caption > p:last-child {
+  max-width: 430px;
+
+  margin: 0;
+
+  color: #86868b;
+
+  font-size: 13px;
+
+  line-height: 1.5;
+}
+
+/* =========================================================
+   BROADCAST MOBILE
+   ========================================================= */
+
+@media (max-width: 900px) {
+  .broadcast-heading {
+    grid-template-columns: 1fr;
+
+    gap: 35px;
+  }
+}
+
+@media (max-width: 650px) {
+  .broadcast-section {
+    padding-top: 85px;
+
+    padding-bottom: 85px;
+  }
+
+  .broadcast-grid {
+    grid-template-columns: 1fr;
+
+    gap: 55px;
+  }
+
+  .broadcast-caption h3 {
+    font-size: 19px;
+  }
+}
