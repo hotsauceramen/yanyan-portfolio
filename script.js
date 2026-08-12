@@ -13,18 +13,22 @@ const DESIGN_IMAGES = Array.from(
 );
 
 /*
-   100 designs
-   ↓
-   10 sets
-   ↓
-   10 designs per set
+   Number of designs displayed
+   during each automatic showcase.
 */
 
 const SET_SIZE = 10;
 
+/*
+   Time between showcase rotations.
+   6000 = 6 seconds.
+*/
+
 const SHOWCASE_INTERVAL = 6000;
 
-let currentSet = 0;
+/*
+   Showcase starts in random mode.
+*/
 
 let showcaseMode = true;
 
@@ -61,6 +65,48 @@ if (grid && grid.parentNode) {
 }
 
 /* =========================================================
+   RANDOM IMAGE SELECTION
+   ========================================================= */
+
+/*
+   Returns exactly 10 unique random images
+   from the complete 100-image collection.
+
+   IMPORTANT:
+
+   There is NO memory of previous selections.
+
+   An image can appear again on the next
+   rotation.
+
+   The only restriction is that the same
+   image cannot appear twice within one set.
+*/
+
+function getRandomDesigns() {
+  const shuffled = [...DESIGN_IMAGES];
+
+  /*
+     Fisher-Yates shuffle
+     gives us a genuinely randomized
+     ordering of the complete collection.
+  */
+
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const randomIndex = Math.floor(Math.random() * (i + 1));
+
+    [shuffled[i], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[i]];
+  }
+
+  /*
+     Take only the first 10
+     from the shuffled 100.
+  */
+
+  return shuffled.slice(0, SET_SIZE);
+}
+
+/* =========================================================
    CREATE DESIGN CARD
    ========================================================= */
 
@@ -79,15 +125,66 @@ function createDesignCard(file, index) {
 
   img.alt = `Graphic design work ${index + 1}`;
 
+  /*
+     First 20 images load eagerly.
+     The rest use lazy loading.
+  */
+
   img.loading = index < 20 ? "eager" : "lazy";
 
   img.decoding = "async";
+
+  /*
+     Detect the original image dimensions.
+
+     Landscape images with an aspect ratio
+     of 1.35 or wider receive the
+     design-landscape class.
+
+     This allows CSS to make them span
+     two columns.
+  */
+
+  function detectAspectRatio() {
+    if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+      const aspectRatio = img.naturalWidth / img.naturalHeight;
+
+      if (aspectRatio >= 1.35) {
+        item.classList.add("design-landscape");
+      } else {
+        item.classList.remove("design-landscape");
+      }
+    }
+  }
+
+  /*
+     Detect once the image finishes loading.
+  */
+
+  img.addEventListener("load", detectAspectRatio);
+
+  /*
+     Also attempt detection immediately
+     in case the image was already cached.
+  */
+
+  if (img.complete) {
+    detectAspectRatio();
+  }
+
+  /*
+     Remove broken images.
+  */
 
   img.onerror = () => {
     item.remove();
   };
 
   item.appendChild(img);
+
+  /*
+     Open image lightbox.
+  */
 
   item.addEventListener("click", () => {
     openModal(img.src, img.alt);
@@ -97,33 +194,42 @@ function createDesignCard(file, index) {
 }
 
 /* =========================================================
-   RENDER SHOWCASE SET
+   RENDER RANDOM SHOWCASE
    ========================================================= */
 
-function renderShowcaseSet(setNumber) {
+function renderRandomShowcase() {
   if (!grid) return;
 
-  const start = setNumber * SET_SIZE;
+  /*
+     Select a completely new random
+     group of 10 from all 100 images.
+  */
 
-  const end = start + SET_SIZE;
-
-  const files = DESIGN_IMAGES.slice(start, end);
+  const files = getRandomDesigns();
 
   /*
-     Fade current set out.
+     Fade current collection out.
   */
 
   grid.classList.add("design-grid-fading");
 
   setTimeout(() => {
+    /*
+       Clear the old images.
+    */
+
     grid.innerHTML = "";
 
+    /*
+       Add the new random collection.
+    */
+
     files.forEach((file, index) => {
-      grid.appendChild(createDesignCard(file, start + index));
+      grid.appendChild(createDesignCard(file, index));
     });
 
     /*
-       Fade new set in.
+       Fade the new collection in.
     */
 
     requestAnimationFrame(() => {
@@ -138,15 +244,26 @@ function renderShowcaseSet(setNumber) {
 
 let showcaseTimer;
 
+/*
+   Start automatic random showcase.
+*/
+
 function startShowcase() {
   clearInterval(showcaseTimer);
 
   showcaseTimer = setInterval(() => {
-    if (!showcaseMode) return;
+    if (!showcaseMode) {
+      return;
+    }
 
-    currentSet = (currentSet + 1) % 10;
+    /*
+         Every rotation independently
+         chooses 10 random images.
 
-    renderShowcaseSet(currentSet);
+         There is NO previous-set memory.
+      */
+
+    renderRandomShowcase();
   }, SHOWCASE_INTERVAL);
 }
 
@@ -164,6 +281,12 @@ function renderAllDesigns() {
   setTimeout(() => {
     grid.innerHTML = "";
 
+    /*
+       Render every image.
+
+       The original aspect ratio is preserved.
+    */
+
     DESIGN_IMAGES.forEach((file, index) => {
       grid.appendChild(createDesignCard(file, index));
     });
@@ -177,18 +300,21 @@ function renderAllDesigns() {
 }
 
 /* =========================================================
-   BACK TO SHOWCASE
+   BACK TO RANDOM SHOWCASE
    ========================================================= */
 
 function returnToShowcase() {
   showcaseMode = true;
 
-  currentSet = 0;
-
   grid.classList.add("design-grid-fading");
 
   setTimeout(() => {
-    renderShowcaseSet(currentSet);
+    /*
+       Immediately choose a completely
+       random collection of 10.
+    */
+
+    renderRandomShowcase();
 
     viewAll.textContent = "View all 100 works";
 
@@ -259,9 +385,19 @@ document.addEventListener("keydown", (event) => {
    ========================================================= */
 
 if (DESIGN_IMAGES.length > 0) {
-  empty.style.display = "none";
+  if (empty) {
+    empty.style.display = "none";
+  }
 
-  renderShowcaseSet(currentSet);
+  /*
+     First showcase is also random.
+  */
+
+  renderRandomShowcase();
+
+  /*
+     Start the 6-second random rotation.
+  */
 
   startShowcase();
 }
@@ -304,6 +440,11 @@ function createYouTubePlayers() {
         },
 
         onStateChange: (event) => {
+          /*
+                     Keep only one YouTube
+                     video actively playing.
+                  */
+
           if (event.data === YT.PlayerState.PLAYING) {
             youtubePlayers.forEach((otherPlayer) => {
               if (otherPlayer !== event.target) {
@@ -325,12 +466,16 @@ function createYouTubePlayers() {
 
 const videoObserver = new IntersectionObserver(
   (entries) => {
-    if (!youtubeReady) return;
+    if (!youtubeReady) {
+      return;
+    }
 
     entries.forEach((entry) => {
       const player = youtubePlayers.get(entry.target);
 
-      if (!player) return;
+      if (!player) {
+        return;
+      }
 
       try {
         if (entry.isIntersecting && entry.intersectionRatio >= 0.55) {

@@ -1,3 +1,8 @@
+/* =========================================================
+   YANYAN PORTFOLIO
+   APPLE-STYLE PORTFOLIO
+   ========================================================= */
+
 * {
   box-sizing: border-box;
 }
@@ -8,12 +13,18 @@ html {
 
 body {
   margin: 0;
+
   background: #000000;
+
   color: #f5f5f7;
+
   font-family:
     -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
     "Helvetica Neue", Arial, sans-serif;
+
   -webkit-font-smoothing: antialiased;
+
+  overflow-x: hidden;
 }
 
 body.modal-open {
@@ -25,17 +36,28 @@ a {
   text-decoration: none;
 }
 
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
 /* =========================================================
    HEADER
    ========================================================= */
 
 .site-header {
   position: sticky;
+
   top: 0;
+
   z-index: 50;
 
   display: flex;
+
   align-items: center;
+
   justify-content: space-between;
 
   min-height: 58px;
@@ -47,22 +69,30 @@ a {
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 
   backdrop-filter: saturate(180%) blur(18px);
+
   -webkit-backdrop-filter: saturate(180%) blur(18px);
 }
 
 .wordmark {
   font-size: 13px;
+
   font-weight: 700;
+
   letter-spacing: 0.18em;
 }
 
 .site-header nav {
   display: flex;
+
   gap: 24px;
 
   color: #86868b;
 
   font-size: 13px;
+}
+
+.site-header nav a {
+  transition: color 0.2s ease;
 }
 
 .site-header nav a:hover {
@@ -76,18 +106,20 @@ a {
 .section {
   width: min(1240px, calc(100% - clamp(40px, 10vw, 144px)));
 
-  margin: auto;
+  margin: 0 auto;
 }
 
 .hero {
   min-height: calc(100vh - 58px);
 
   display: flex;
+
   align-items: center;
 }
 
 .hero > div {
   width: 100%;
+
   padding: 90px 0 110px;
 }
 
@@ -97,6 +129,7 @@ a {
   color: #86868b;
 
   font-size: 11px;
+
   font-weight: 700;
 
   letter-spacing: 0.16em;
@@ -135,6 +168,8 @@ a {
 .scroll-link {
   display: inline-flex;
 
+  align-items: center;
+
   gap: 9px;
 
   margin-top: 44px;
@@ -154,9 +189,11 @@ a {
 
 .video-section,
 .design-section,
+.broadcast-section,
 .about-section,
 .contact-section {
   padding-top: 120px;
+
   padding-bottom: 120px;
 
   border-top: 1px solid rgba(255, 255, 255, 0.14);
@@ -202,6 +239,7 @@ a {
   inset: 0;
 
   width: 100%;
+
   height: 100%;
 
   border: 0;
@@ -274,6 +312,84 @@ a {
 }
 
 /* =========================================================
+   LIVE & BROADCAST
+   ========================================================= */
+
+.broadcast-heading {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1.2fr)
+    minmax(260px, 0.8fr);
+
+  gap: 50px;
+
+  align-items: end;
+}
+
+.broadcast-grid {
+  display: grid;
+
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+
+  gap: 70px 28px;
+}
+
+.broadcast-card {
+  min-width: 0;
+}
+
+.broadcast-frame {
+  position: relative;
+
+  width: 100%;
+
+  aspect-ratio: 16 / 9;
+
+  overflow: hidden;
+
+  background: #111111;
+
+  border-radius: 18px;
+}
+
+.broadcast-frame video {
+  display: block;
+
+  width: 100%;
+
+  height: 100%;
+
+  object-fit: cover;
+}
+
+.broadcast-caption {
+  padding: 20px 2px 0;
+}
+
+.broadcast-caption h3 {
+  margin: 5px 0 9px;
+
+  font-size: 20px;
+
+  font-weight: 600;
+
+  letter-spacing: -0.02em;
+}
+
+.broadcast-caption > p:last-child {
+  max-width: 430px;
+
+  margin: 0;
+
+  color: #86868b;
+
+  font-size: 13px;
+
+  line-height: 1.5;
+}
+
+/* =========================================================
    GRAPHIC DESIGN HEADING
    ========================================================= */
 
@@ -302,13 +418,16 @@ a {
 }
 
 /* =========================================================
-   GRAPHIC DESIGN GRID
+   GRAPHIC DESIGN
+   ORIGINAL IMAGE DIMENSIONS
    ========================================================= */
 
 .design-grid {
   display: grid;
 
   grid-template-columns: repeat(5, minmax(0, 1fr));
+
+  align-items: start;
 
   gap: 12px;
 
@@ -323,16 +442,24 @@ a {
   transform: translateY(8px);
 }
 
+/* =========================================================
+   DESIGN ITEM
+   ========================================================= */
+
 .design-item {
   position: relative;
 
+  display: block;
+
+  width: 100%;
+
+  height: auto;
+
   overflow: hidden;
 
-  aspect-ratio: 1;
+  padding: 0;
 
   border: 0;
-
-  padding: 0;
 
   border-radius: 12px;
 
@@ -344,12 +471,17 @@ a {
 }
 
 .design-item img {
-  width: 100%;
-  height: 100%;
-
   display: block;
 
-  object-fit: cover;
+  width: 100%;
+
+  height: auto;
+
+  max-width: 100%;
+
+  object-fit: contain;
+
+  vertical-align: middle;
 
   transition: transform 400ms cubic-bezier(0.2, 0.7, 0.2, 1);
 }
@@ -359,35 +491,7 @@ a {
 }
 
 /* =========================================================
-   OLD SHOW MORE BUTTON
-   ========================================================= */
-
-.text-button {
-  display: block;
-
-  margin: 38px auto 0;
-
-  padding: 0;
-
-  border: 0;
-
-  background: none;
-
-  color: #f5f5f7;
-
-  font-size: 14px;
-
-  font-weight: 600;
-
-  cursor: pointer;
-}
-
-.text-button:hover {
-  text-decoration: underline;
-}
-
-/* =========================================================
-   VIEW ALL 100 WORKS BUTTON
+   VIEW ALL 100 WORKS
    ========================================================= */
 
 .view-all-designs {
@@ -398,6 +502,7 @@ a {
   display: flex;
 
   align-items: center;
+
   justify-content: center;
 
   width: fit-content;
@@ -440,8 +545,7 @@ a {
     background 0.25s ease,
     color 0.25s ease,
     border-color 0.25s ease,
-    transform 0.25s ease,
-    opacity 0.25s ease;
+    transform 0.25s ease;
 }
 
 .view-all-designs:hover {
@@ -616,6 +720,7 @@ a {
   display: none;
 
   align-items: center;
+
   justify-content: center;
 
   padding: 35px;
@@ -649,6 +754,7 @@ a {
   right: 24px;
 
   width: 42px;
+
   height: 42px;
 
   border: 0;
@@ -675,9 +781,12 @@ a {
 
   .design-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+
+    align-items: start;
   }
 
   .design-heading,
+  .broadcast-heading,
   .about-grid {
     grid-template-columns: 1fr;
 
@@ -714,8 +823,13 @@ a {
     font-size: clamp(52px, 16vw, 82px);
   }
 
+  /* -------------------------------------------------------
+     SECTIONS
+     ------------------------------------------------------- */
+
   .video-section,
   .design-section,
+  .broadcast-section,
   .about-section,
   .contact-section {
     padding-top: 85px;
@@ -726,6 +840,10 @@ a {
   .section-heading {
     margin-bottom: 36px;
   }
+
+  /* -------------------------------------------------------
+     VIDEO
+     ------------------------------------------------------- */
 
   .video-grid {
     grid-template-columns: 1fr;
@@ -748,17 +866,33 @@ a {
   }
 
   /* -------------------------------------------------------
-     GRAPHIC DESIGN GRID
+     BROADCAST
+     ------------------------------------------------------- */
+
+  .broadcast-grid {
+    grid-template-columns: 1fr;
+
+    gap: 55px;
+  }
+
+  .broadcast-caption h3 {
+    font-size: 19px;
+  }
+
+  /* -------------------------------------------------------
+     GRAPHIC DESIGN
      ------------------------------------------------------- */
 
   .design-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
 
+    align-items: start;
+
     gap: 8px;
   }
 
   /* -------------------------------------------------------
-     MOBILE VIEW ALL BUTTON
+     VIEW ALL BUTTON
      ------------------------------------------------------- */
 
   .view-all-designs {
@@ -863,6 +997,10 @@ a {
     width: calc(100% - 32px);
   }
 
+  .design-grid {
+    gap: 6px;
+  }
+
   .view-all-designs {
     min-width: 160px;
 
@@ -873,118 +1011,5 @@ a {
     padding: 12px 18px;
 
     font-size: 13px;
-  }
-}
-/* =========================================================
-   LIVE & BROADCAST
-   ========================================================= */
-
-.broadcast-section {
-  padding-top: 120px;
-  padding-bottom: 120px;
-
-  border-top: 1px solid rgba(255, 255, 255, 0.14);
-}
-
-.broadcast-heading {
-  display: grid;
-
-  grid-template-columns:
-    minmax(0, 1.2fr)
-    minmax(260px, 0.8fr);
-
-  gap: 50px;
-
-  align-items: end;
-}
-
-.broadcast-grid {
-  display: grid;
-
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-
-  gap: 70px 28px;
-}
-
-.broadcast-card {
-  min-width: 0;
-}
-
-.broadcast-frame {
-  position: relative;
-
-  width: 100%;
-
-  aspect-ratio: 16 / 9;
-
-  overflow: hidden;
-
-  background: #111111;
-
-  border-radius: 18px;
-}
-
-.broadcast-frame video {
-  display: block;
-
-  width: 100%;
-  height: 100%;
-
-  object-fit: cover;
-}
-
-.broadcast-caption {
-  padding: 20px 2px 0;
-}
-
-.broadcast-caption h3 {
-  margin: 5px 0 9px;
-
-  font-size: 20px;
-
-  font-weight: 600;
-
-  letter-spacing: -0.02em;
-}
-
-.broadcast-caption > p:last-child {
-  max-width: 430px;
-
-  margin: 0;
-
-  color: #86868b;
-
-  font-size: 13px;
-
-  line-height: 1.5;
-}
-
-/* =========================================================
-   BROADCAST MOBILE
-   ========================================================= */
-
-@media (max-width: 900px) {
-  .broadcast-heading {
-    grid-template-columns: 1fr;
-
-    gap: 35px;
-  }
-}
-
-@media (max-width: 650px) {
-  .broadcast-section {
-    padding-top: 85px;
-
-    padding-bottom: 85px;
-  }
-
-  .broadcast-grid {
-    grid-template-columns: 1fr;
-
-    gap: 55px;
-  }
-
-  .broadcast-caption h3 {
-    font-size: 19px;
   }
 }
