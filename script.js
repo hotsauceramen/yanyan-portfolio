@@ -1,6 +1,6 @@
 /* =========================================================
    YANYAN PORTFOLIO
-   GRAPHIC DESIGN SHOWCASE + YOUTUBE VIDEO SYSTEM
+   GRAPHIC DESIGN + BROADCAST + YOUTUBE SYSTEM
    ========================================================= */
 
 /* =========================================================
@@ -45,7 +45,7 @@ const more = document.getElementById("load-more");
 const empty = document.getElementById("design-empty");
 
 /* =========================================================
-   CREATE "VIEW ALL" BUTTON
+   CREATE VIEW ALL BUTTON
    ========================================================= */
 
 const viewAll = document.createElement("button");
@@ -67,42 +67,29 @@ if (grid && grid.parentNode) {
 }
 
 /* =========================================================
-   RANDOM IMAGE SELECTION
+   RANDOM DESIGN SELECTION
    ========================================================= */
-
-/*
-   Selects completely random images from all 100.
-
-   We make sure the exact same image set isn't immediately
-   repeated on the next transition.
-*/
 
 function getRandomShowcase() {
   if (DESIGN_IMAGES.length <= SHOWCASE_SIZE) {
     return [...DESIGN_IMAGES];
   }
 
-  let selected;
+  const shuffled = [...DESIGN_IMAGES];
 
-  do {
-    const shuffled = [...DESIGN_IMAGES];
+  /*
+     Fisher-Yates shuffle.
+     Every rotation starts with
+     a completely fresh random order.
+  */
 
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const randomIndex = Math.floor(Math.random() * (i + 1));
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const randomIndex = Math.floor(Math.random() * (i + 1));
 
-      [shuffled[i], shuffled[randomIndex]] = [
-        shuffled[randomIndex],
-        shuffled[i],
-      ];
-    }
+    [shuffled[i], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[i]];
+  }
 
-    selected = shuffled.slice(0, SHOWCASE_SIZE);
-  } while (
-    currentShowcase.length > 0 &&
-    selected.every((file) => currentShowcase.includes(file))
-  );
-
-  return selected;
+  return shuffled.slice(0, SHOWCASE_SIZE);
 }
 
 /* =========================================================
@@ -113,13 +100,9 @@ function preloadImage(file) {
   return new Promise((resolve) => {
     const img = new Image();
 
-    img.onload = () => {
-      resolve(true);
-    };
+    img.onload = () => resolve(true);
 
-    img.onerror = () => {
-      resolve(false);
-    };
+    img.onerror = () => resolve(false);
 
     img.src = `assets/images/graphic-design/${file}`;
   });
@@ -156,6 +139,27 @@ function createDesignCard(file, index) {
 
   img.decoding = "async";
 
+  /*
+     Detect landscape artwork.
+
+     Landscape designs wider than 1.35:1
+     span two columns.
+  */
+
+  const detectAspectRatio = () => {
+    if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+      const ratio = img.naturalWidth / img.naturalHeight;
+
+      if (ratio >= 1.35) {
+        item.classList.add("design-landscape");
+      } else {
+        item.classList.remove("design-landscape");
+      }
+    }
+  };
+
+  img.addEventListener("load", detectAspectRatio);
+
   img.onerror = () => {
     item.remove();
   };
@@ -166,11 +170,19 @@ function createDesignCard(file, index) {
     openModal(img.src, img.alt);
   });
 
+  /*
+     Cached image safety check.
+  */
+
+  if (img.complete) {
+    detectAspectRatio();
+  }
+
   return item;
 }
 
 /* =========================================================
-   RENDER INITIAL SHOWCASE
+   INITIAL SHOWCASE
    ========================================================= */
 
 function renderInitialShowcase() {
@@ -203,24 +215,24 @@ async function transitionToRandomShowcase() {
   isTransitioning = true;
 
   /*
-     Choose the next random group BEFORE
-     changing anything on screen.
+     Pick the next completely
+     random group immediately.
   */
 
   const nextShowcase = getRandomShowcase();
 
   /*
-     Preload every image first.
+     PRELOAD EVERYTHING FIRST.
 
-     The current images remain visible while
-     the next group loads.
+     The current gallery remains visible
+     while the next images download.
   */
 
   await preloadShowcase(nextShowcase);
 
   /*
-     Make sure the user didn't leave showcase mode
-     while the images were loading.
+     User may have changed modes while
+     images were loading.
   */
 
   if (!showcaseMode) {
@@ -230,21 +242,17 @@ async function transitionToRandomShowcase() {
   }
 
   /*
-     Fade current images out.
+     Fade current gallery out.
   */
 
   grid.classList.add("design-grid-fading");
-
-  /*
-     Wait for the CSS fade-out.
-  */
 
   await new Promise((resolve) => {
     setTimeout(resolve, FADE_DURATION);
   });
 
   /*
-     Replace the images while they're invisible.
+     Replace images while invisible.
   */
 
   grid.innerHTML = "";
@@ -256,8 +264,8 @@ async function transitionToRandomShowcase() {
   currentShowcase = nextShowcase;
 
   /*
-     Force the browser to acknowledge
-     the new invisible state before fading in.
+     Force a browser layout frame
+     before starting fade-in.
   */
 
   requestAnimationFrame(() => {
@@ -277,7 +285,9 @@ function startShowcase() {
   clearInterval(showcaseTimer);
 
   showcaseTimer = setInterval(() => {
-    if (!showcaseMode) return;
+    if (!showcaseMode) {
+      return;
+    }
 
     transitionToRandomShowcase();
   }, SHOWCASE_INTERVAL);
@@ -304,15 +314,7 @@ async function renderAllDesigns() {
 
   stopShowcase();
 
-  /*
-     Don't start another random transition.
-  */
-
   isTransitioning = false;
-
-  /*
-     Fade the current showcase out.
-  */
 
   grid.classList.add("design-grid-fading");
 
@@ -320,19 +322,11 @@ async function renderAllDesigns() {
     setTimeout(resolve, FADE_DURATION);
   });
 
-  /*
-     Show all 100.
-  */
-
   grid.innerHTML = "";
 
   DESIGN_IMAGES.forEach((file, index) => {
     grid.appendChild(createDesignCard(file, index));
   });
-
-  /*
-     Fade everything back in.
-  */
 
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
@@ -354,31 +348,20 @@ async function returnToShowcase() {
 
   stopShowcase();
 
-  /*
-     Pick a completely new random set.
-  */
-
   const nextShowcase = getRandomShowcase();
 
   /*
-     Preload it before touching the screen.
+     Preload before hiding the
+     100-image gallery.
   */
 
   await preloadShowcase(nextShowcase);
-
-  /*
-     Fade the 100-image gallery out.
-  */
 
   grid.classList.add("design-grid-fading");
 
   await new Promise((resolve) => {
     setTimeout(resolve, FADE_DURATION);
   });
-
-  /*
-     Replace gallery with random showcase.
-  */
 
   grid.innerHTML = "";
 
@@ -388,10 +371,6 @@ async function returnToShowcase() {
 
   currentShowcase = nextShowcase;
 
-  /*
-     Fade new showcase in.
-  */
-
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       grid.classList.remove("design-grid-fading");
@@ -399,10 +378,6 @@ async function returnToShowcase() {
   });
 
   viewAll.textContent = "View all 100 works";
-
-  /*
-     Restart automatic rotation.
-  */
 
   startShowcase();
 }
@@ -412,7 +387,9 @@ async function returnToShowcase() {
    ========================================================= */
 
 viewAll.addEventListener("click", () => {
-  if (isTransitioning) return;
+  if (isTransitioning) {
+    return;
+  }
 
   if (showcaseMode) {
     renderAllDesigns();
@@ -432,7 +409,9 @@ const modalImg = document.getElementById("modal-image");
 const close = document.getElementById("modal-close");
 
 function openModal(src, alt) {
-  if (!modal || !modalImg) return;
+  if (!modal || !modalImg) {
+    return;
+  }
 
   modalImg.src = src;
 
@@ -446,7 +425,9 @@ function openModal(src, alt) {
 }
 
 function closeModal() {
-  if (!modal || !modalImg) return;
+  if (!modal || !modalImg) {
+    return;
+  }
 
   modal.classList.remove("open");
 
@@ -476,7 +457,7 @@ document.addEventListener("keydown", (event) => {
 });
 
 /* =========================================================
-   START GRAPHIC DESIGN SHOWCASE
+   START GRAPHIC DESIGN
    ========================================================= */
 
 if (DESIGN_IMAGES.length > 0 && grid) {
@@ -484,18 +465,156 @@ if (DESIGN_IMAGES.length > 0 && grid) {
     empty.style.display = "none";
   }
 
-  /*
-     Render the first random set immediately.
-  */
-
   renderInitialShowcase();
-
-  /*
-     Start automatic random rotation.
-  */
 
   startShowcase();
 }
+
+/* =========================================================
+   BROADCAST VIDEO SYSTEM
+   ========================================================= */
+
+const broadcastVideos = Array.from(
+  document.querySelectorAll(".broadcast-video"),
+);
+
+/*
+   Tracks whether each broadcast video
+   is currently visible.
+*/
+
+const broadcastVisibility = new Map();
+
+/*
+   Force mobile-friendly playback
+   properties through JavaScript too.
+*/
+
+broadcastVideos.forEach((video) => {
+  video.muted = true;
+
+  video.defaultMuted = true;
+
+  video.playsInline = true;
+
+  video.setAttribute("muted", "");
+
+  video.setAttribute("playsinline", "");
+
+  video.setAttribute("webkit-playsinline", "");
+
+  broadcastVisibility.set(video, false);
+});
+
+/*
+   Try to play a broadcast video.
+
+   Browsers may still reject autoplay,
+   so the promise rejection is intentionally
+   ignored.
+*/
+
+function playBroadcastVideo(video) {
+  if (!video) return;
+
+  video.muted = true;
+
+  video.defaultMuted = true;
+
+  const playPromise = video.play();
+
+  if (playPromise && typeof playPromise.catch === "function") {
+    playPromise.catch(() => {
+      /*
+           Mobile browsers may block
+           autoplay under certain conditions.
+        */
+    });
+  }
+}
+
+/*
+   Pause when no longer visible.
+*/
+
+function pauseBroadcastVideo(video) {
+  if (!video) return;
+
+  try {
+    video.pause();
+  } catch (error) {}
+}
+
+/*
+   Intersection Observer for broadcast.
+
+   rootMargin starts playback slightly
+   before the video reaches the center
+   of the screen.
+*/
+
+const broadcastObserver = new IntersectionObserver(
+  (entries) => {
+    entries.forEach((entry) => {
+      const video = entry.target;
+
+      const visible = entry.isIntersecting && entry.intersectionRatio >= 0.25;
+
+      broadcastVisibility.set(video, visible);
+
+      if (visible) {
+        playBroadcastVideo(video);
+      } else {
+        pauseBroadcastVideo(video);
+      }
+    });
+  },
+  {
+    root: null,
+
+    rootMargin: "150px 0px 150px 0px",
+
+    threshold: [0, 0.25, 0.5, 0.75, 1],
+  },
+);
+
+broadcastVideos.forEach((video) => {
+  broadcastObserver.observe(video);
+
+  /*
+       If the browser has loaded enough
+       metadata already, attempt playback
+       immediately if appropriate.
+    */
+
+  video.addEventListener("loadedmetadata", () => {
+    if (broadcastVisibility.get(video)) {
+      playBroadcastVideo(video);
+    }
+  });
+});
+
+/*
+   Additional safety check when the page
+   becomes visible again.
+
+   This helps Safari/iOS after returning
+   from another tab or app.
+*/
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    broadcastVideos.forEach(pauseBroadcastVideo);
+
+    return;
+  }
+
+  broadcastVideos.forEach((video) => {
+    if (broadcastVisibility.get(video)) {
+      playBroadcastVideo(video);
+    }
+  });
+});
 
 /* =========================================================
    YOUTUBE AUTOPLAY SYSTEM
@@ -507,7 +626,17 @@ const youtubeFrames = Array.from(
 
 const youtubePlayers = new Map();
 
+const youtubeVisibility = new Map();
+
 let youtubeReady = false;
+
+/*
+   Initialize visibility state.
+*/
+
+youtubeFrames.forEach((iframe) => {
+  youtubeVisibility.set(iframe, false);
+});
 
 /*
    YouTube calls this automatically
@@ -526,17 +655,51 @@ window.onYouTubeIframeAPIReady = function () {
 
 function createYouTubePlayers() {
   youtubeFrames.forEach((iframe) => {
+    /*
+         Avoid creating the same player twice.
+      */
+
+    if (youtubePlayers.has(iframe)) {
+      return;
+    }
+
     const player = new YT.Player(iframe, {
       events: {
         onReady: (event) => {
-          event.target.mute();
+          const currentPlayer = event.target;
 
-          youtubePlayers.set(iframe, event.target);
+          /*
+                     Always mute first.
+
+                     Muted playback is required
+                     for reliable autoplay.
+                  */
+
+          currentPlayer.mute();
+
+          youtubePlayers.set(iframe, currentPlayer);
+
+          /*
+                     If the iframe is already
+                     visible when the player
+                     finishes loading, play it.
+                  */
+
+          if (youtubeVisibility.get(iframe)) {
+            try {
+              currentPlayer.playVideo();
+            } catch (error) {}
+          }
         },
 
         onStateChange: (event) => {
+          /*
+                     Only one YouTube video
+                     should actively play.
+                  */
+
           if (event.data === YT.PlayerState.PLAYING) {
-            youtubePlayers.forEach((otherPlayer) => {
+            youtubePlayers.forEach((otherPlayer, otherIframe) => {
               if (otherPlayer !== event.target) {
                 try {
                   otherPlayer.pauseVideo();
@@ -551,35 +714,95 @@ function createYouTubePlayers() {
 }
 
 /* =========================================================
-   VIDEO INTERSECTION OBSERVER
+   YOUTUBE PLAY
    ========================================================= */
 
-const videoObserver = new IntersectionObserver(
+function playYouTubeVideo(iframe) {
+  const player = youtubePlayers.get(iframe);
+
+  if (!player) {
+    return;
+  }
+
+  try {
+    player.mute();
+
+    player.playVideo();
+  } catch (error) {}
+}
+
+/* =========================================================
+   YOUTUBE PAUSE
+   ========================================================= */
+
+function pauseYouTubeVideo(iframe) {
+  const player = youtubePlayers.get(iframe);
+
+  if (!player) {
+    return;
+  }
+
+  try {
+    player.pauseVideo();
+  } catch (error) {}
+}
+
+/* =========================================================
+   YOUTUBE INTERSECTION OBSERVER
+   ========================================================= */
+
+const youtubeObserver = new IntersectionObserver(
   (entries) => {
-    if (!youtubeReady) return;
-
     entries.forEach((entry) => {
-      const player = youtubePlayers.get(entry.target);
+      const iframe = entry.target;
 
-      if (!player) return;
+      const visible = entry.isIntersecting && entry.intersectionRatio >= 0.55;
 
-      try {
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.55) {
-          player.mute();
+      youtubeVisibility.set(iframe, visible);
 
-          player.playVideo();
-        } else if (!entry.isIntersecting || entry.intersectionRatio < 0.2) {
-          player.pauseVideo();
-        }
-      } catch (error) {}
+      if (!youtubeReady) {
+        return;
+      }
+
+      if (visible) {
+        playYouTubeVideo(iframe);
+      } else if (!entry.isIntersecting || entry.intersectionRatio < 0.2) {
+        pauseYouTubeVideo(iframe);
+      }
     });
   },
-
   {
     threshold: [0, 0.2, 0.55, 0.8],
   },
 );
 
 youtubeFrames.forEach((iframe) => {
-  videoObserver.observe(iframe);
+  youtubeObserver.observe(iframe);
+});
+
+/* =========================================================
+   PAGE VISIBILITY — YOUTUBE
+   ========================================================= */
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    youtubePlayers.forEach((player) => {
+      try {
+        player.pauseVideo();
+      } catch (error) {}
+    });
+
+    return;
+  }
+
+  /*
+       Resume only the YouTube video
+       currently visible.
+    */
+
+  youtubeVisibility.forEach((visible, iframe) => {
+    if (visible) {
+      playYouTubeVideo(iframe);
+    }
+  });
 });
