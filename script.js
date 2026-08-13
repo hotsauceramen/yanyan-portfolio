@@ -12,25 +12,27 @@ const DESIGN_IMAGES = Array.from(
   (_, i) => `design-${String(i + 1).padStart(3, "0")} Large.jpeg`,
 );
 
-/*
-   Number of designs displayed
-   during each automatic showcase.
-*/
+/* =========================================================
+   SHOWCASE SETTINGS
+   ========================================================= */
 
-const SET_SIZE = 10;
-
-/*
-   Time between showcase rotations.
-   6000 = 6 seconds.
-*/
+const SHOWCASE_SIZE = 10;
 
 const SHOWCASE_INTERVAL = 6000;
 
-/*
-   Showcase starts in random mode.
-*/
+const FADE_DURATION = 700;
+
+/* =========================================================
+   SHOWCASE STATE
+   ========================================================= */
+
+let currentShowcase = [];
 
 let showcaseMode = true;
+
+let showcaseTimer = null;
+
+let isTransitioning = false;
 
 /* =========================================================
    ELEMENTS
@@ -69,41 +71,66 @@ if (grid && grid.parentNode) {
    ========================================================= */
 
 /*
-   Returns exactly 10 unique random images
-   from the complete 100-image collection.
+   Selects completely random images from all 100.
 
-   IMPORTANT:
-
-   There is NO memory of previous selections.
-
-   An image can appear again on the next
-   rotation.
-
-   The only restriction is that the same
-   image cannot appear twice within one set.
+   We make sure the exact same image set isn't immediately
+   repeated on the next transition.
 */
 
-function getRandomDesigns() {
-  const shuffled = [...DESIGN_IMAGES];
-
-  /*
-     Fisher-Yates shuffle
-     gives us a genuinely randomized
-     ordering of the complete collection.
-  */
-
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const randomIndex = Math.floor(Math.random() * (i + 1));
-
-    [shuffled[i], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[i]];
+function getRandomShowcase() {
+  if (DESIGN_IMAGES.length <= SHOWCASE_SIZE) {
+    return [...DESIGN_IMAGES];
   }
 
-  /*
-     Take only the first 10
-     from the shuffled 100.
-  */
+  let selected;
 
-  return shuffled.slice(0, SET_SIZE);
+  do {
+    const shuffled = [...DESIGN_IMAGES];
+
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const randomIndex = Math.floor(Math.random() * (i + 1));
+
+      [shuffled[i], shuffled[randomIndex]] = [
+        shuffled[randomIndex],
+        shuffled[i],
+      ];
+    }
+
+    selected = shuffled.slice(0, SHOWCASE_SIZE);
+  } while (
+    currentShowcase.length > 0 &&
+    selected.every((file) => currentShowcase.includes(file))
+  );
+
+  return selected;
+}
+
+/* =========================================================
+   PRELOAD IMAGE
+   ========================================================= */
+
+function preloadImage(file) {
+  return new Promise((resolve) => {
+    const img = new Image();
+
+    img.onload = () => {
+      resolve(true);
+    };
+
+    img.onerror = () => {
+      resolve(false);
+    };
+
+    img.src = `assets/images/graphic-design/${file}`;
+  });
+}
+
+/* =========================================================
+   PRELOAD SHOWCASE
+   ========================================================= */
+
+async function preloadShowcase(files) {
+  await Promise.all(files.map((file) => preloadImage(file)));
 }
 
 /* =========================================================
@@ -125,66 +152,15 @@ function createDesignCard(file, index) {
 
   img.alt = `Graphic design work ${index + 1}`;
 
-  /*
-     First 20 images load eagerly.
-     The rest use lazy loading.
-  */
-
-  img.loading = index < 20 ? "eager" : "lazy";
+  img.loading = "eager";
 
   img.decoding = "async";
-
-  /*
-     Detect the original image dimensions.
-
-     Landscape images with an aspect ratio
-     of 1.35 or wider receive the
-     design-landscape class.
-
-     This allows CSS to make them span
-     two columns.
-  */
-
-  function detectAspectRatio() {
-    if (img.naturalWidth > 0 && img.naturalHeight > 0) {
-      const aspectRatio = img.naturalWidth / img.naturalHeight;
-
-      if (aspectRatio >= 1.35) {
-        item.classList.add("design-landscape");
-      } else {
-        item.classList.remove("design-landscape");
-      }
-    }
-  }
-
-  /*
-     Detect once the image finishes loading.
-  */
-
-  img.addEventListener("load", detectAspectRatio);
-
-  /*
-     Also attempt detection immediately
-     in case the image was already cached.
-  */
-
-  if (img.complete) {
-    detectAspectRatio();
-  }
-
-  /*
-     Remove broken images.
-  */
 
   img.onerror = () => {
     item.remove();
   };
 
   item.appendChild(img);
-
-  /*
-     Open image lightbox.
-  */
 
   item.addEventListener("click", () => {
     openModal(img.src, img.alt);
@@ -194,132 +170,241 @@ function createDesignCard(file, index) {
 }
 
 /* =========================================================
-   RENDER RANDOM SHOWCASE
+   RENDER INITIAL SHOWCASE
    ========================================================= */
 
-function renderRandomShowcase() {
+function renderInitialShowcase() {
   if (!grid) return;
 
+  const files = getRandomShowcase();
+
+  currentShowcase = files;
+
+  grid.innerHTML = "";
+
+  files.forEach((file, index) => {
+    grid.appendChild(createDesignCard(file, index));
+  });
+
+  grid.classList.remove("design-grid-fading");
+}
+
+/* =========================================================
+   SMOOTH SHOWCASE TRANSITION
+   ========================================================= */
+
+async function transitionToRandomShowcase() {
+  if (!grid) return;
+
+  if (!showcaseMode) return;
+
+  if (isTransitioning) return;
+
+  isTransitioning = true;
+
   /*
-     Select a completely new random
-     group of 10 from all 100 images.
+     Choose the next random group BEFORE
+     changing anything on screen.
   */
 
-  const files = getRandomDesigns();
+  const nextShowcase = getRandomShowcase();
 
   /*
-     Fade current collection out.
+     Preload every image first.
+
+     The current images remain visible while
+     the next group loads.
+  */
+
+  await preloadShowcase(nextShowcase);
+
+  /*
+     Make sure the user didn't leave showcase mode
+     while the images were loading.
+  */
+
+  if (!showcaseMode) {
+    isTransitioning = false;
+
+    return;
+  }
+
+  /*
+     Fade current images out.
   */
 
   grid.classList.add("design-grid-fading");
 
-  setTimeout(() => {
-    /*
-       Clear the old images.
-    */
+  /*
+     Wait for the CSS fade-out.
+  */
 
-    grid.innerHTML = "";
+  await new Promise((resolve) => {
+    setTimeout(resolve, FADE_DURATION);
+  });
 
-    /*
-       Add the new random collection.
-    */
+  /*
+     Replace the images while they're invisible.
+  */
 
-    files.forEach((file, index) => {
-      grid.appendChild(createDesignCard(file, index));
-    });
+  grid.innerHTML = "";
 
-    /*
-       Fade the new collection in.
-    */
+  nextShowcase.forEach((file, index) => {
+    grid.appendChild(createDesignCard(file, index));
+  });
 
+  currentShowcase = nextShowcase;
+
+  /*
+     Force the browser to acknowledge
+     the new invisible state before fading in.
+  */
+
+  requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       grid.classList.remove("design-grid-fading");
+
+      isTransitioning = false;
     });
-  }, 700);
+  });
 }
 
 /* =========================================================
-   AUTOMATIC ROTATION
+   START SHOWCASE
    ========================================================= */
-
-let showcaseTimer;
-
-/*
-   Start automatic random showcase.
-*/
 
 function startShowcase() {
   clearInterval(showcaseTimer);
 
   showcaseTimer = setInterval(() => {
-    if (!showcaseMode) {
-      return;
-    }
+    if (!showcaseMode) return;
 
-    /*
-         Every rotation independently
-         chooses 10 random images.
-
-         There is NO previous-set memory.
-      */
-
-    renderRandomShowcase();
+    transitionToRandomShowcase();
   }, SHOWCASE_INTERVAL);
+}
+
+/* =========================================================
+   STOP SHOWCASE
+   ========================================================= */
+
+function stopShowcase() {
+  clearInterval(showcaseTimer);
+
+  showcaseTimer = null;
 }
 
 /* =========================================================
    SHOW ALL 100
    ========================================================= */
 
-function renderAllDesigns() {
+async function renderAllDesigns() {
+  if (!grid) return;
+
   showcaseMode = false;
 
-  clearInterval(showcaseTimer);
+  stopShowcase();
+
+  /*
+     Don't start another random transition.
+  */
+
+  isTransitioning = false;
+
+  /*
+     Fade the current showcase out.
+  */
 
   grid.classList.add("design-grid-fading");
 
-  setTimeout(() => {
-    grid.innerHTML = "";
+  await new Promise((resolve) => {
+    setTimeout(resolve, FADE_DURATION);
+  });
 
-    /*
-       Render every image.
+  /*
+     Show all 100.
+  */
 
-       The original aspect ratio is preserved.
-    */
+  grid.innerHTML = "";
 
-    DESIGN_IMAGES.forEach((file, index) => {
-      grid.appendChild(createDesignCard(file, index));
-    });
+  DESIGN_IMAGES.forEach((file, index) => {
+    grid.appendChild(createDesignCard(file, index));
+  });
 
+  /*
+     Fade everything back in.
+  */
+
+  requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       grid.classList.remove("design-grid-fading");
     });
+  });
 
-    viewAll.textContent = "Back to showcase";
-  }, 700);
+  viewAll.textContent = "Back to showcase";
 }
 
 /* =========================================================
-   BACK TO RANDOM SHOWCASE
+   RETURN TO SHOWCASE
    ========================================================= */
 
-function returnToShowcase() {
+async function returnToShowcase() {
+  if (!grid) return;
+
   showcaseMode = true;
+
+  stopShowcase();
+
+  /*
+     Pick a completely new random set.
+  */
+
+  const nextShowcase = getRandomShowcase();
+
+  /*
+     Preload it before touching the screen.
+  */
+
+  await preloadShowcase(nextShowcase);
+
+  /*
+     Fade the 100-image gallery out.
+  */
 
   grid.classList.add("design-grid-fading");
 
-  setTimeout(() => {
-    /*
-       Immediately choose a completely
-       random collection of 10.
-    */
+  await new Promise((resolve) => {
+    setTimeout(resolve, FADE_DURATION);
+  });
 
-    renderRandomShowcase();
+  /*
+     Replace gallery with random showcase.
+  */
 
-    viewAll.textContent = "View all 100 works";
+  grid.innerHTML = "";
 
-    startShowcase();
-  }, 700);
+  nextShowcase.forEach((file, index) => {
+    grid.appendChild(createDesignCard(file, index));
+  });
+
+  currentShowcase = nextShowcase;
+
+  /*
+     Fade new showcase in.
+  */
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      grid.classList.remove("design-grid-fading");
+    });
+  });
+
+  viewAll.textContent = "View all 100 works";
+
+  /*
+     Restart automatic rotation.
+  */
+
+  startShowcase();
 }
 
 /* =========================================================
@@ -327,6 +412,8 @@ function returnToShowcase() {
    ========================================================= */
 
 viewAll.addEventListener("click", () => {
+  if (isTransitioning) return;
+
   if (showcaseMode) {
     renderAllDesigns();
   } else {
@@ -345,6 +432,8 @@ const modalImg = document.getElementById("modal-image");
 const close = document.getElementById("modal-close");
 
 function openModal(src, alt) {
+  if (!modal || !modalImg) return;
+
   modalImg.src = src;
 
   modalImg.alt = alt;
@@ -357,6 +446,8 @@ function openModal(src, alt) {
 }
 
 function closeModal() {
+  if (!modal || !modalImg) return;
+
   modal.classList.remove("open");
 
   modal.setAttribute("aria-hidden", "true");
@@ -366,13 +457,17 @@ function closeModal() {
   document.body.classList.remove("modal-open");
 }
 
-close.addEventListener("click", closeModal);
+if (close) {
+  close.addEventListener("click", closeModal);
+}
 
-modal.addEventListener("click", (event) => {
-  if (event.target === modal) {
-    closeModal();
-  }
-});
+if (modal) {
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) {
+      closeModal();
+    }
+  });
+}
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
@@ -384,19 +479,19 @@ document.addEventListener("keydown", (event) => {
    START GRAPHIC DESIGN SHOWCASE
    ========================================================= */
 
-if (DESIGN_IMAGES.length > 0) {
+if (DESIGN_IMAGES.length > 0 && grid) {
   if (empty) {
     empty.style.display = "none";
   }
 
   /*
-     First showcase is also random.
+     Render the first random set immediately.
   */
 
-  renderRandomShowcase();
+  renderInitialShowcase();
 
   /*
-     Start the 6-second random rotation.
+     Start automatic random rotation.
   */
 
   startShowcase();
@@ -425,9 +520,9 @@ window.onYouTubeIframeAPIReady = function () {
   createYouTubePlayers();
 };
 
-/*
-   Create YouTube players.
-*/
+/* =========================================================
+   CREATE YOUTUBE PLAYERS
+   ========================================================= */
 
 function createYouTubePlayers() {
   youtubeFrames.forEach((iframe) => {
@@ -440,11 +535,6 @@ function createYouTubePlayers() {
         },
 
         onStateChange: (event) => {
-          /*
-                     Keep only one YouTube
-                     video actively playing.
-                  */
-
           if (event.data === YT.PlayerState.PLAYING) {
             youtubePlayers.forEach((otherPlayer) => {
               if (otherPlayer !== event.target) {
@@ -466,16 +556,12 @@ function createYouTubePlayers() {
 
 const videoObserver = new IntersectionObserver(
   (entries) => {
-    if (!youtubeReady) {
-      return;
-    }
+    if (!youtubeReady) return;
 
     entries.forEach((entry) => {
       const player = youtubePlayers.get(entry.target);
 
-      if (!player) {
-        return;
-      }
+      if (!player) return;
 
       try {
         if (entry.isIntersecting && entry.intersectionRatio >= 0.55) {
